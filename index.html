@@ -3,15 +3,12 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
-    <title>Retro Bowl College Client</title>
+    <title>Retro Bowl College - Modded by YOU</title>
     <style>
         body { background: #000; color: #ccc; margin: 0; overflow: hidden; font-family: 'Courier New', monospace; }
         canvas { image-rendering: pixelated; width: 100vw; height: 100vh; display: block; }
 
-        /* Prevent highlighting mod elements */
-        #mod-floating-btn, #mod-menu-overlay {
-            user-select: none; -webkit-user-select: none;
-        }
+        #mod-floating-btn, #mod-menu-overlay { user-select: none; -webkit-user-select: none; }
 
         #mod-floating-btn {
             position: fixed; top: 20px; left: 20px; width: 46px; height: 46px;
@@ -23,7 +20,7 @@
 
         #mod-menu-overlay {
             position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 300px; background: rgba(15, 15, 15, 0.98);
+            width: 300px; background: rgba(10, 10, 10, 0.98);
             border: 2px solid #ed1c24; color: white; z-index: 10001;
             display: none; box-shadow: 0 0 50px #000;
         }
@@ -36,36 +33,37 @@
             background: #222; border: 1px solid #ed1c24; color: #fff;
             padding: 8px 12px; cursor: pointer; font-family: monospace; font-size: 11px;
         }
-        .mod-btn:hover { background: #ed1c24; }
+        .mod-btn:hover { background: #ed1c24; color: white; }
         .close-btn { width: 100%; color: #ff0000; border-color: #ff0000; margin-top: 10px; }
     </style>
 </head>
 <body>
-
     <div id="gm4html5_div_id">
         <canvas id="canvas" width="853" height="480" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);"></canvas>
     </div>
 
     <div id="mod-floating-btn">M</div>
     <div id="mod-menu-overlay">
-        <div class="mod-header" id="menu-drag-handle">RB COLLEGE MODS</div>
+        <div class="mod-header" id="menu-drag-handle">MODDED BY [YOUR NAME]</div>
         <div class="mod-content">
             <div class="cheat-row">
                 <span>Coaching Credits</span>
-                <button class="mod-btn" onclick="applyStorageMod('credits')">SET 50k</button>
+                <button class="mod-btn" onclick="applyStorageMod('credits')">+50k</button>
             </div>
             <div class="cheat-row">
-                <span>God Mode Loop</span>
-                <button class="mod-btn" id="god-btn" onclick="toggleGodMode()">GOD: OFF</button>
+                <span>God Mode</span>
+                <button class="mod-btn" id="god-btn" onclick="toggleGodMode()">OFF</button>
+            </div>
+            <div class="cheat-row">
+                <span>Game Speed</span>
+                <button class="mod-btn" id="speed-btn" onclick="toggleSpeed()">NORMAL</button>
             </div>
             <button class="mod-btn close-btn" onclick="toggleMenu()">CLOSE MENU</button>
         </div>
     </div>
 
     <script src="poki-sdk.js"></script>
-
     <script src="html5game/RetroBowl.js"></script>
-
     <script src="mods.js"></script>
 
     <script>
@@ -77,9 +75,7 @@
             window.addEventListener("load", function (_) {
                 if (window.PokiSDK) {
                     PokiSDK.init().then(() => fin(true)).catch(() => fin(false));
-                } else {
-                    fin(false);
-                }
+                } else { fin(false); }
             });
         })();
     </script>
