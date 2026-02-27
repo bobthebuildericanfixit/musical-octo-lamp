@@ -99,7 +99,14 @@
 
 <!-- Custom PreBody code is injected here -->
 
+<div id="mod-menu" style="position: fixed; top: 10px; left: 10px; z-index: 9999; background: rgba(0,0,0,0.8); color: white; padding: 15px; border: 2px solid #ed1c24; display: none; font-family: monospace;">
+    <h3 style="margin-top:0;">Retro Mod Menu</h3>
+    <button onclick="addCredits()">+999 Credits</button><br><br>
+    <button onclick="maxStamina()">Infinite Stamina</button><br><br>
+    <button onclick="toggleMenu()" style="background: red; color: white;">Close</button>
+</div>
 
+<button id="menu-toggle" style="position: fixed; top: 10px; left: 10px; z-index: 9998;" onclick="toggleMenu()">M</button>
 <body>
     <div class="gm4html5_div_class" id="gm4html5_div_id">
 
