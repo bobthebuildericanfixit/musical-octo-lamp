@@ -3,60 +3,127 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
-    <title>Retro Bowl College - Modded Client</title>
+    <title>Retro Bowl College - Prospect1700 Edition</title>
     <style>
-        body { background: #000; color: #ccc; margin: 0; overflow: hidden; font-family: sans-serif; }
+        body { background: #000; color: #ccc; margin: 0; overflow: hidden; font-family: 'Courier New', monospace; user-select: none; }
         canvas { image-rendering: pixelated; width: 100vw; height: 100vh; display: block; }
 
+        /* Draggable Mod Menu */
         #mod-menu {
             position: fixed; top: 20px; left: 20px; z-index: 10000;
-            background: rgba(20, 20, 20, 0.9); border: 2px solid #ed1c24;
-            padding: 10px; border-radius: 8px; user-select: none;
+            background: rgba(10, 10, 10, 0.95); border: 2px solid #ed1c24;
+            width: 240px; box-shadow: 0 0 20px #000; color: white;
         }
+        .mod-header { background: #ed1c24; padding: 10px; font-weight: bold; cursor: move; text-align: center; font-size: 12px; }
+        .mod-body { padding: 15px; }
         .mod-btn {
-            background: #ed1c24; color: white; border: none; padding: 8px;
-            cursor: pointer; font-weight: bold; width: 100%; margin-top: 5px;
+            background: #222; color: #fff; border: 1px solid #444; padding: 8px;
+            cursor: pointer; width: 100%; margin-top: 8px; font-size: 11px; font-family: monospace;
         }
+        .mod-btn:hover { background: #ed1c24; border-color: #fff; }
+        .status-text { font-size: 10px; color: #0f0; margin-top: 10px; text-align: center; }
     </style>
 </head>
 <body>
+
     <div id="mod-menu">
-        <div style="font-weight: bold; color: #ed1c24; margin-bottom: 5px;">CLIENT LOADED</div>
-        <button class="mod-btn" onclick="applyCredits()">+inf CREDITS</button>
+        <div class="mod-header" id="menu-handle">PROSPECT1700 CLIENT</div>
+        <div class="mod-body">
+            <button class="mod-btn" onclick="applyStorageMod()">SET 50k CREDITS</button>
+            <button class="mod-btn" id="speed-toggle" onclick="toggleFastForward()">SPEED: 1.5x</button>
+            <div class="status-text" id="mod-status">Hooks Active: Prospect1700</div>
+        </div>
     </div>
 
     <script src="poki-sdk.js"></script>
-    <script src="html5game/RetroBowl.js"></script>
 
     <script>
-        // 1. THE TEXT MOD (REPLACING "NEW STAR GAMES")
-        // We hook into the internal string handler of GameMaker
-        const originalSetText = window.decodeURIComponent;
+        // --- PROSPECT1700 ENGINE HOOKS ---
+
+        // 1. THE TEXT SWAPPER (Stable Version)
+        // This intercepts GameMaker's string decoder to replace the dev name
+        const _decode = window.decodeURIComponent;
         window.decodeURIComponent = function(str) {
-            let decoded = originalSetText(str);
-            if (decoded.includes("New Star Games")) {
-                return decoded.replace("New Star Games", "MODDED BY Prospect1700");
+            let res = _decode(str);
+            if (res.includes("New Star Games")) {
+                return res.replace("New Star Games", "MODDED BY PROSPECT1700");
             }
-            return decoded;
+            if (res.includes("Retro Bowl")) {
+                return res.replace("Retro Bowl", "PROSPECT BOWL");
+            }
+            return res;
         };
 
-        // 2. STABLE BOOT
-        window.addEventListener("load", function() {
-            if (typeof GameMaker_Init === "function") GameMaker_Init();
-        });
+        // 2. THE SPEED HOOK
+        // We force the global speed scale to 1.5x. 
+        // This is safer than modifying room_speed which often causes physics crashes.
+        window.g_fSpeedScale = 1.5; 
 
-        // 3. STABLE STORAGE MOD (CREDITS)
-        function applyCredits() {
+        // 3. THE GOD MODE LOOP (Fixed for Stability)
+        // We use a safe try-catch so it never crashes the game
+        setInterval(() => {
+            if (window.g_pBuiltIn) {
+                try {
+                    window.g_pBuiltIn.stamina = 100;
+                    window.g_pBuiltIn.player_condition = 100;
+                } catch(e) {}
+            }
+        }, 1000);
+
+        // 4. STORAGE MOD (Credits)
+        function applyStorageMod() {
             const key = Object.keys(localStorage).find(k => k.includes("RetroBowl") && k.includes(".ini"));
             if (key) {
                 let data = localStorage.getItem(key);
-                data = data.replace(/coach_credit="(\d+)"/g, 'coach_credit="999999999999999"');
+                data = data.replace(/coach_credit="(\d+)"/g, 'coach_credit="50000"');
                 localStorage.setItem(key, data);
                 location.reload();
             } else {
-                alert("Play 1 week first!");
+                alert("No save found. Play 1 week first!");
             }
         }
+
+        // 5. LIVE SPEED TOGGLE
+        function toggleFastForward() {
+            const btn = document.getElementById("speed-toggle");
+            if (window.g_fSpeedScale === 1.5) {
+                window.g_fSpeedScale = 2.5;
+                btn.innerText = "SPEED: 2.5x (INSANE)";
+            } else {
+                window.g_fSpeedScale = 1.5;
+                btn.innerText = "SPEED: 1.5x";
+            }
+        }
+    </script>
+
+    <script src="html5game/RetroBowl.js"></script>
+
+    <script>
+        // INITIALIZE GAME
+        window.onload = function() {
+            if (window.PokiSDK) {
+                PokiSDK.init().then(() => {
+                    if (typeof GameMaker_Init === "function") GameMaker_Init();
+                });
+            }
+        };
+
+        // DRAG LOGIC
+        const menu = document.getElementById("mod-menu");
+        const handle = document.getElementById("menu-handle");
+        let dragging = false, offset = [0, 0];
+
+        handle.onmousedown = (e) => {
+            dragging = true;
+            offset = [menu.offsetLeft - e.clientX, menu.offsetTop - e.clientY];
+        };
+        document.onmousemove = (e) => {
+            if (dragging) {
+                menu.style.left = (e.clientX + offset[0]) + "px";
+                menu.style.top = (e.clientY + offset[1]) + "px";
+            }
+        };
+        document.onmouseup = () => dragging = false;
     </script>
 </body>
 </html>
