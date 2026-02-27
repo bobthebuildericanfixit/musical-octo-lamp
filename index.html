@@ -5,20 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
     <title>Retro Bowl College | Prospect1700 Edition</title>
     <style>
-        /* Base Game Styling */
         body { background: #000; margin: 0; overflow: hidden; font-family: 'Courier New', monospace; }
         canvas { image-rendering: pixelated; width: 100vw; height: 100vh; display: block; }
 
-        /* Global No-Select to prevent highlighting during drags/clicks */
+        /* Universal No-Select */
         * {
             -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
             user-select: none;
-            -webkit-touch-callout: none;
+            outline: none;
         }
 
-        /* The Mod Menu */
         #mod-menu {
             position: fixed; top: 20px; left: 20px; z-index: 10000;
             background: rgba(10, 10, 10, 0.98); border: 2px solid #ed1c24;
@@ -27,10 +23,7 @@
             border-radius: 4px;
         }
 
-        /* Minimize State (Small Red Circle) */
-        #mod-menu.minimized {
-            width: 44px; height: 44px; border-radius: 50%; overflow: hidden;
-        }
+        #mod-menu.minimized { width: 44px; height: 44px; border-radius: 50%; overflow: hidden; }
 
         .mod-header { 
             background: #ed1c24; padding: 10px; font-weight: bold; 
@@ -38,7 +31,7 @@
         }
         .mod-header:active { cursor: grabbing; }
         
-        #min-btn { cursor: pointer; padding: 0 8px; font-size: 18px; font-weight: bold; }
+        #min-btn { cursor: pointer; padding: 0 8px; font-size: 18px; }
 
         .mod-body { padding: 15px; }
         #mod-menu.minimized .mod-body { display: none; }
@@ -48,14 +41,14 @@
         .mod-btn {
             background: #1a1a1a; color: #fff; border: 1px solid #ed1c24; padding: 10px;
             cursor: pointer; width: 100%; margin-top: 10px; font-family: monospace;
-            transition: 0.1s; outline: none;
+            transition: 0.1s;
         }
         .mod-btn:hover { background: #ed1c24; color: #000; font-weight: bold; }
         .mod-btn:active { transform: scale(0.95); }
         
         input[type="number"] {
             width: 88%; background: #000; border: 1px solid #444; color: #0f0;
-            padding: 8px; margin-top: 5px; font-family: monospace; outline: none;
+            padding: 8px; margin-top: 5px; font-family: monospace; user-select: text !important;
         }
 
         .cheat-label { font-size: 11px; color: #888; margin-top: 12px; text-transform: uppercase; }
@@ -75,15 +68,17 @@
         </div>
         <div class="mod-body">
             <div class="cheat-label">Coaching Credits</div>
-            <input type="number" id="cc-amount" value="50000" onfocus="this.select()">
+            <input type="number" id="cc-amount" value="50000">
             <button class="mod-btn" onclick="applyCustomCredits()">UPDATE SAVE</button>
             
-            <hr style="border: 0.5px solid #222; margin: 15px 0;">
+            <button class="mod-btn" style="color: #ffd700; border-color: #ffd700;" onclick="unlockAchievements()">🏆 UNLOCK ALL ACHIEVEMENTS</button>
+            
+            <hr style="border: 0.5px solid #222; margin: 10px 0;">
             
             <button class="mod-btn" id="speed-btn" onclick="toggleSpeed()">SPEED: 1.5x</button>
             <button class="mod-btn" id="gpa-btn" onclick="toggleGPA()">AUTO-GPA: OFF</button>
             
-            <div class="status-footer">Prospect1700 Internal Hook v3.0</div>
+            <div class="status-footer">Prospect1700 Internal Hook v4.0</div>
         </div>
     </div>
 
@@ -91,119 +86,78 @@
     <script src="html5game/RetroBowl.js"></script>
 
     <script>
-        /**
-         * 1. BRANDING & TEXT INJECTION
-         */
+        /** 1. BRANDING **/
         const _decode = window.decodeURIComponent;
         window.decodeURIComponent = function(str) {
             let res = _decode(str);
-            return res.replace(/New Star Games/g, "PROSPECT1700")
-                      .replace(/Retro Bowl/g, "PROSPECT BOWL");
+            return res.replace(/New Star Games/g, "PROSPECT1700").replace(/Retro Bowl/g, "PROSPECT BOWL");
         };
 
-        /**
-         * 2. SPEED & GAMEPLAY HOOKS
-         */
+        /** 2. GAMEPLAY & SPEED **/
         window.g_fSpeedScale = 1.5;
         function toggleSpeed() {
             const btn = document.getElementById("speed-btn");
-            if (window.g_fSpeedScale < 2.0) {
-                window.g_fSpeedScale = 2.5;
-                btn.innerText = "SPEED: 2.5x (FAST)";
-            } else {
-                window.g_fSpeedScale = 1.5;
-                btn.innerText = "SPEED: 1.5x";
-            }
+            window.g_fSpeedScale = (window.g_fSpeedScale < 2.0) ? 2.5 : 1.5;
+            btn.innerText = "SPEED: " + window.g_fSpeedScale + "x";
         }
 
         let gpaActive = false;
         function toggleGPA() {
             gpaActive = !gpaActive;
-            const btn = document.getElementById("gpa-btn");
-            btn.innerText = gpaActive ? "AUTO-GPA: ON" : "AUTO-GPA: OFF";
-            btn.style.borderColor = gpaActive ? "#0f0" : "#ed1c24";
+            document.getElementById("gpa-btn").innerText = gpaActive ? "AUTO-GPA: ON" : "AUTO-GPA: OFF";
         }
 
-        // Live injection loop for non-refreshing mods
         setInterval(() => {
             if (window.g_pBuiltIn) {
                 try {
-                    // God Mode: Stamina & Condition
                     window.g_pBuiltIn.stamina = 100;
                     window.g_pBuiltIn.player_condition = 100;
-                    // GPA Override
                     if (gpaActive) window.g_pBuiltIn.player_gpa = 4.0;
                 } catch(e) {}
             }
         }, 1000);
 
-        /**
-         * 3. STORAGE MODS (Credits)
-         */
+        /** 3. SAVE MODS **/
         function applyCustomCredits() {
             const key = Object.keys(localStorage).find(k => k.includes("RetroBowl") && k.includes(".ini"));
-            if (!key) return alert("Save not found. Please play 1 week of a new season first!");
-
+            if (!key) return alert("Save not found! Play 1 week first.");
             let data = localStorage.getItem(key);
-            let target = parseInt(document.getElementById("cc-amount").value);
-            
-            // Check existing CC to prevent accidental downgrades
-            let match = data.match(/coach_credit="(\d+)"/);
-            if (match) {
-                let current = parseInt(match[1]);
-                if (current > target) {
-                    if (!confirm(`You currently have ${current} CC. Downgrade to ${target}?`)) return;
-                }
-            }
-
-            data = data.replace(/coach_credit="(\d+)"/g, `coach_credit="${target}"`);
+            let val = document.getElementById("cc-amount").value;
+            data = data.replace(/coach_credit="(\d+)"/g, `coach_credit="${val}"`);
             localStorage.setItem(key, data);
-            location.reload(); 
+            location.reload();
         }
 
-        /**
-         * 4. UI PERSISTENCE & DRAG LOGIC
-         */
+        function unlockAchievements() {
+            const key = Object.keys(localStorage).find(k => k.includes("RetroBowl") && k.includes(".ini"));
+            if (!key) return alert("No save found!");
+            let data = localStorage.getItem(key);
+            const tags = ["ACH_PASS", "ACH_TOUCHDOWN1", "ACH_TOUCHDOWN3", "ACH_TOUCHDOWN5", "ACH_FIELDGOAL", "ACH_FIELDGOAL25", "ACH_FIELDGOAL50", "ACH_FIELDGOAL60", "ACH_POINTAFTER1", "ACH_POINTAFTER2", "ACH_WIN1", "ACH_WIN5", "ACH_WIN10", "ACH_WIN25", "ACH_WIN50", "ACH_WIN100", "ACH_SEASON1", "ACH_SEASON5", "ACH_SEASON10", "ACH_SEASON20", "ACH_DRAFT", "ACH_FREEAGENT", "ACH_TRADEIN", "ACH_TRADEOUT", "ACH_CUT", "ACH_WIN_DIVISION", "ACH_WIN_PLAYOFF", "ACH_WIN_AFC", "ACH_WIN_NFC", "ACH_WIN_RETROBOWL1", "ACH_WIN_RETROBOWL3", "ACH_WIN_RETROBOWL5", "ACH_WIN_RETROBOWL10", "ACH_CAREER_TD50", "ACH_CAREER_TD100", "ACH_CAREER_TD250", "ACH_CAREER_TD500", "ACH_UPGRADE_STADIUM", "ACH_UPGRADE_TRAINING", "ACH_UPGRADE_REHAB", "ACH_MAX_STADIUM", "ACH_MAX_TRAINING", "ACH_MAX_REHAB", "ACH_WINNING_SEASON", "ACH_UNBEATEN_SEASON", "ACH_OFFENSE5", "ACH_DEFENSE5", "ACH_MORALE100", "ACH_FANS100", "ACH_HIRE_OF", "ACH_HIRE_DF", "ACH_HIRE_OF5", "ACH_HIRE_DF5", "ACH_PASS10", "ACH_PASS25", "ACH_PASS50", "ACH_RUN5", "ACH_RUN10", "ACH_RUN15", "ACH_GAME_PASS_200", "ACH_GAME_PASS_300", "ACH_GAME_PASS_400", "ACH_GAME_PASS_500", "ACH_GAME_COMPLETE_100", "ACH_GAME_RUSH_50", "ACH_GAME_RUSH_100", "ACH_GAME_RUSH_150", "ACH_TEAMS2", "ACH_SHUTOUT", "ACH_SCORE50", "ACH_COACHEXTEND", "ACH_FREEAGENT5", "ACH_BACKTOBACK", "ACH_THREEPEAT", "ACH_RETROBOWL_NOSTARQB", "ACH_RETROBOWL_NOSTAR", "ACH_WIN_NOSTARQB", "ACH_WIN_NOSTAR", "ACH_TD_QB", "ACH_TD_PASS50", "ACH_DOINK", "ACH_RETURN_25", "ACH_RETURN_50", "ACH_RETURN_75", "ACH_RETURN_TD", "ACH_NEW_FRESHMAN", "ACH_SENIOR_DRAFTR1", "ACH_SENIOR_DRAFTR2", "ACH_SENIOR_DRAFTR3", "ACH_SENIOR_GRAD", "ACH_JUNIOR_DRAFT", "ACH_WIN_MAJOR_SUB", "ACH_WIN_MINOR_SUB", "ACH_WIN_CONF_DIV", "ACH_WIN_ANY_BOWL"];
+            tags.forEach(t => { data = data.replace(new RegExp(`${t}="0"`, "g"), `${t}="1"`); });
+            localStorage.setItem(key, data);
+            alert("All achievements unlocked! Reloading...");
+            location.reload();
+        }
+
+        /** 4. UI PERSISTENCE **/
         const menu = document.getElementById("mod-menu");
         const handle = document.getElementById("menu-handle");
+        const saved = JSON.parse(localStorage.getItem('p_pos'));
+        if (saved) { menu.style.left = saved.x + "px"; menu.style.top = saved.y + "px"; }
 
-        // Load saved position
-        const savedPos = JSON.parse(localStorage.getItem('prospect_menu_pos'));
-        if (savedPos) {
-            menu.style.left = savedPos.x + "px";
-            menu.style.top = savedPos.y + "px";
-        }
-
-        let drag = false, offset = [0, 0];
-        handle.onmousedown = (e) => {
-            drag = true;
-            offset = [menu.offsetLeft - e.clientX, menu.offsetTop - e.clientY];
-        };
+        let drag = false, off = [0, 0];
+        handle.onmousedown = (e) => { drag = true; off = [menu.offsetLeft - e.clientX, menu.offsetTop - e.clientY]; };
         document.onmousemove = (e) => {
             if (drag) {
-                let newX = e.clientX + offset[0];
-                let newY = e.clientY + offset[1];
-                menu.style.left = newX + "px";
-                menu.style.top = newY + "px";
-                localStorage.setItem('prospect_menu_pos', JSON.stringify({x: newX, y: newY}));
+                let nx = e.clientX + off[0], ny = e.clientY + off[1];
+                menu.style.left = nx + "px"; menu.style.top = ny + "px";
+                localStorage.setItem('p_pos', JSON.stringify({x: nx, y: ny}));
             }
         };
         document.onmouseup = () => drag = false;
+        function toggleMinimize() { menu.classList.toggle("minimized"); document.getElementById("min-btn").innerText = menu.classList.contains("minimized") ? "M" : "—"; }
 
-        function toggleMinimize() {
-            const btn = document.getElementById("min-btn");
-            const isMin = menu.classList.toggle("minimized");
-            btn.innerText = isMin ? "M" : "—";
-        }
-
-        /**
-         * 5. ENGINE INITIALIZATION
-         */
-        window.onload = function() {
-            if (window.PokiSDK) {
-                PokiSDK.init().then(() => { if (typeof GameMaker_Init === "function") GameMaker_Init(); });
-            } else { if (typeof GameMaker_Init === "function") GameMaker_Init(); }
-        };
+        window.onload = () => { if (window.PokiSDK) PokiSDK.init().then(() => GameMaker_Init()); else GameMaker_Init(); };
     </script>
 </body>
 </html>
