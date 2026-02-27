@@ -1,99 +1,76 @@
 /**
- * RETRO BOWL COLLEGE MOD CLIENT ENGINE
+ * MODS.JS - Real-Time Injection & Drag Logic
  */
 
-// --- 1. UNIVERSAL DRAG LOGIC ---
-function makeDraggable(element, handle) {
-    let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-    handle.onmousedown = dragMouseDown;
-
-    function dragMouseDown(e) {
-        e = e || window.event;
-        e.preventDefault();
-        pos3 = e.clientX;
-        pos4 = e.clientY;
-        document.onmouseup = closeDragElement;
-        document.onmousemove = elementDrag;
-    }
-
-    function elementDrag(e) {
-        e = e || window.event;
-        e.preventDefault();
-        pos1 = pos3 - e.clientX;
-        pos2 = pos4 - e.clientY;
-        pos3 = e.clientX;
-        pos4 = e.clientY;
-        element.style.top = (element.offsetTop - pos2) + "px";
-        element.style.left = (element.offsetLeft - pos1) + "px";
-        element.style.transform = "none"; // Fixes transform:translate conflict
-    }
-
-    function closeDragElement() {
-        document.onmouseup = null;
-        document.onmousemove = null;
-    }
-}
-
-// Initialize dragging
+// --- 1. DRAG & UI LOGIC ---
 const mBtn = document.getElementById("mod-floating-btn");
 const mMenu = document.getElementById("mod-menu-overlay");
 const mHandle = document.getElementById("menu-drag-handle");
 
-makeDraggable(mBtn, mBtn);
-makeDraggable(mMenu, mHandle);
+function setupDraggable(el, handle) {
+    let p1 = 0, p2 = 0, p3 = 0, p4 = 0;
+    handle.onmousedown = (e) => {
+        e.preventDefault();
+        p3 = e.clientX; p4 = e.clientY;
+        document.onmouseup = () => { document.onmouseup = null; document.onmousemove = null; };
+        document.onmousemove = (e) => {
+            p1 = p3 - e.clientX; p2 = p4 - e.clientY;
+            p3 = e.clientX; p4 = e.clientY;
+            el.style.top = (el.offsetTop - p2) + "px";
+            el.style.left = (el.offsetLeft - p1) + "px";
+            el.style.transform = "none";
+        };
+    };
+}
+setupDraggable(mBtn, mBtn);
+setupDraggable(mMenu, mHandle);
 
-// --- 2. TOGGLE LOGIC ---
-let clickStartTime;
-mBtn.addEventListener('mousedown', () => clickStartTime = Date.now());
-mBtn.addEventListener('mouseup', () => {
-    // If the button was held for less than 200ms, it's a click, not a drag
-    if (Date.now() - clickStartTime < 200) {
-        toggleMenu();
-    }
-});
+let clickStart;
+mBtn.onmousedown = () => clickStart = Date.now();
+mBtn.onmouseup = () => { if (Date.now() - clickStart < 200) toggleMenu(); };
 
 function toggleMenu() {
     mMenu.style.display = (mMenu.style.display === 'block') ? 'none' : 'block';
 }
 
-// --- 3. STABLE STORAGE CHEATS ---
-function getSaveKey() {
-    return Object.keys(localStorage).find(key => key.includes("RetroBowl") && key.includes(".ini"));
-}
-
+// --- 2. STORAGE CHEATS (Requires Refresh) ---
 function applyStorageMod(type) {
-    const key = getSaveKey();
-    if (!key) {
-        alert("No save file found! Play 1 week in career mode first.");
-        return;
-    }
-
-    let data = localStorage.getItem(key);
-
-    switch(type) {
-        case 'credits':
-            data = data.replace(/coach_credit="(\d+)"/g, 'coach_credit="50000"');
-            break;
-        case 'cap':
-            data = data.replace(/salary_cap="(\d+)"/g, 'salary_cap="500"');
-            break;
-        case 'stamina':
-            data = data.replace(/stamina="(\d+)"/g, 'stamina="100"');
-            data = data.replace(/condition="(\d+)"/g, 'condition="100"');
-            break;
-    }
-
-    localStorage.setItem(key, data);
+    const key = Object.keys(localStorage).find(k => k.includes("RetroBowl") && k.includes(".ini"));
+    if (!key) return alert("Save Not Found! Play 1 week first.");
     
-    // Feedback and Refresh
-    const targetBtn = event.target;
-    targetBtn.innerText = "APPLYING...";
-    targetBtn.style.background = "#00ff00";
-    targetBtn.style.color = "#000";
-
-    setTimeout(() => {
-        location.reload();
-    }, 500);
+    let data = localStorage.getItem(key);
+    if (type === 'credits') data = data.replace(/coach_credit="(\d+)"/g, 'coach_credit="50000"');
+    
+    localStorage.setItem(key, data);
+    location.reload(); 
 }
 
-console.log("Mod Menu Initialized: Drag the 'M' or the Menu Header to move.");
+// --- 3. REAL-TIME GAMEPLAY HOOK (No Refresh) ---
+let godMode = false;
+function toggleGodMode() {
+    godMode = !godMode;
+    const b = document.getElementById('god-btn');
+    b.innerText = godMode ? "GOD: ON" : "GOD: OFF";
+    b.style.background = godMode ? "#00ff00" : "#222";
+    b.style.color = godMode ? "#000" : "#fff";
+
+    if (godMode) {
+        // Runs every 500ms to force live memory values
+        window.godLoop = setInterval(() => {
+            // Target the global GameMaker variables
+            const g = window.g_pBuiltIn || null;
+            if (g) {
+                try {
+                    // Injecting into active RAM
+                    g.stamina = 100;
+                    g.player_condition = 100;
+                    g.morale = 100;
+                    // Some versions use these minified names
+                    if (g.h1) g.h1 = 100; 
+                } catch(e) {}
+            }
+        }, 500);
+    } else {
+        clearInterval(window.godLoop);
+    }
+}
