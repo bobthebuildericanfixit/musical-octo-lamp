@@ -3,58 +3,119 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
-    <title>Retro Bowl College | Prospect1700 Edition</title>
+    <title>Retro Bowl College | Prospect1700</title>
     <style>
         body { background: #000; margin: 0; overflow: hidden; font-family: 'Courier New', monospace; user-select: none; }
         canvas { image-rendering: pixelated; width: 100vw; height: 100vh; display: block; }
 
+        /* Hide menu until game is ready */
         #mod-menu {
             position: fixed; top: 20px; left: 20px; z-index: 10000;
             background: rgba(5, 5, 5, 0.95); border: 2px solid #ed1c24;
-            width: 250px; box-shadow: 0 0 20px #ed1c24; color: white;
+            width: 250px; display: none; box-shadow: 0 0 20px #000; color: white;
         }
-        .mod-header { background: #ed1c24; padding: 12px; font-weight: bold; cursor: move; text-align: center; }
+        .mod-header { background: #ed1c24; padding: 10px; font-weight: bold; cursor: move; text-align: center; }
         .mod-body { padding: 15px; }
         .mod-btn {
-            background: #1a1a1a; color: #fff; border: 1px solid #ed1c24; padding: 10px;
-            cursor: pointer; width: 100%; margin-top: 10px; font-family: monospace; transition: 0.2s;
+            background: #1a1a1a; color: #fff; border: 1px solid #ed1c24; padding: 8px;
+            cursor: pointer; width: 100%; margin-top: 10px; font-family: monospace;
         }
-        .mod-btn:hover { background: #ed1c24; color: #000; font-weight: bold; }
+        .mod-btn:hover { background: #ed1c24; }
     </style>
 </head>
 <body>
 
+    <div id="gm4html5_div_id">
+        <canvas id="canvas" width="853" height="480" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);"></canvas>
+    </div>
+
     <div id="mod-menu">
-        <div class="mod-header" id="menu-handle">PROSPECT1700 | INTERNAL</div>
+        <div class="mod-header" id="menu-handle">PROSPECT1700 CLIENT</div>
         <div class="mod-body">
             <button class="mod-btn" onclick="modSave('credits')">ADD 50k CREDITS</button>
-            <button class="mod-btn" onclick="modSave('cap')">INFINITE SCHOLARSHIP</button>
             <button class="mod-btn" id="speed-btn" onclick="toggleSpeed()">SPEED: 1.5x</button>
             <button class="mod-btn" id="gpa-btn" onclick="toggleGPA()">AUTO-GPA: OFF</button>
+            <div style="font-size: 10px; color: #888; text-align: center; margin-top: 10px;">Status: Game Loaded</div>
         </div>
     </div>
 
     <script src="poki-sdk.js"></script>
+
     <script src="html5game/RetroBowl.js"></script>
-    <script src="mods.js"></script>
 
     <script>
-        // BOOT ENGINE
-        window.onload = () => {
-            if (window.PokiSDK) {
-                PokiSDK.init().then(() => {
-                    if (typeof GameMaker_Init === "function") GameMaker_Init();
-                });
-            }
+        // BRANDING HOOK (Safe Version)
+        const _decode = window.decodeURIComponent;
+        window.decodeURIComponent = function(str) {
+            let res = _decode(str);
+            return res.replace(/New Star Games/g, "PROSPECT1700");
         };
 
-        // DRAG ENGINE
-        const menu = document.getElementById("mod-menu");
-        const handle = document.getElementById("menu-handle");
-        let drag = false, x = 0, y = 0;
-        handle.onmousedown = (e) => { drag = true; x = menu.offsetLeft - e.clientX; y = menu.offsetTop - e.clientY; };
-        document.onmousemove = (e) => { if (drag) { menu.style.left = (e.clientX + x) + "px"; menu.style.top = (e.clientY + y) + "px"; } };
-        document.onmouseup = () => drag = false;
+        // BOOTSTRAP: Only show menu after Poki and GameMaker handshake
+        window.addEventListener("load", function() {
+            if (window.PokiSDK) {
+                PokiSDK.init().then(() => {
+                    console.log("Poki Ready");
+                    startGame();
+                }).catch(() => {
+                    console.log("Poki Failed, starting anyway");
+                    startGame();
+                });
+            } else {
+                startGame();
+            }
+        });
+
+        function startGame() {
+            if (typeof GameMaker_Init === "function") {
+                GameMaker_Init();
+                // Show the menu after a slight delay to ensure canvas is up
+                setTimeout(() => {
+                    document.getElementById("mod-menu").style.display = "block";
+                    initDragging();
+                }, 2000);
+            }
+        }
+
+        // --- CHEAT FUNCTIONS ---
+        window.g_fSpeedScale = 1.5;
+        function toggleSpeed() {
+            window.g_fSpeedScale = (window.g_fSpeedScale === 1.5) ? 2.5 : 1.5;
+            document.getElementById("speed-btn").innerText = "SPEED: " + window.g_fSpeedScale + "x";
+        }
+
+        let gpaActive = false;
+        function toggleGPA() {
+            gpaActive = !gpaActive;
+            document.getElementById("gpa-btn").innerText = gpaActive ? "AUTO-GPA: ON" : "AUTO-GPA: OFF";
+        }
+
+        setInterval(() => {
+            if (window.g_pBuiltIn) {
+                try {
+                    window.g_pBuiltIn.stamina = 100;
+                    if (gpaActive) window.g_pBuiltIn.player_gpa = 4.0;
+                } catch(e) {}
+            }
+        }, 1000);
+
+        function modSave(type) {
+            const key = Object.keys(localStorage).find(k => k.includes("RetroBowl") && k.includes(".ini"));
+            if (!key) return alert("Play 1 week first!");
+            let data = localStorage.getItem(key);
+            if (type === 'credits') data = data.replace(/coach_credit="(\d+)"/g, 'coach_credit="50000"');
+            localStorage.setItem(key, data);
+            location.reload();
+        }
+
+        function initDragging() {
+            const menu = document.getElementById("mod-menu");
+            const handle = document.getElementById("menu-handle");
+            let drag = false, x = 0, y = 0;
+            handle.onmousedown = (e) => { drag = true; x = menu.offsetLeft - e.clientX; y = menu.offsetTop - e.clientY; };
+            document.onmousemove = (e) => { if (drag) { menu.style.left = (e.clientX + x) + "px"; menu.style.top = (e.clientY + y) + "px"; } };
+            document.onmouseup = () => drag = false;
+        }
     </script>
 </body>
 </html>
