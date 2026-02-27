@@ -8,12 +8,7 @@
         body { background: #000; margin: 0; overflow: hidden; font-family: 'Courier New', monospace; }
         canvas { image-rendering: pixelated; width: 100vw; height: 100vh; display: block; }
 
-        /* Universal No-Select */
-        * {
-            -webkit-user-select: none;
-            user-select: none;
-            outline: none;
-        }
+        * { -webkit-user-select: none; user-select: none; outline: none; }
 
         #mod-menu {
             position: fixed; top: 20px; left: 20px; z-index: 10000;
@@ -29,7 +24,6 @@
             background: #ed1c24; padding: 10px; font-weight: bold; 
             cursor: grab; display: flex; justify-content: space-between; align-items: center;
         }
-        .mod-header:active { cursor: grabbing; }
         
         #min-btn { cursor: pointer; padding: 0 8px; font-size: 18px; }
 
@@ -44,7 +38,6 @@
             transition: 0.1s;
         }
         .mod-btn:hover { background: #ed1c24; color: #000; font-weight: bold; }
-        .mod-btn:active { transform: scale(0.95); }
         
         input[type="number"] {
             width: 88%; background: #000; border: 1px solid #444; color: #0f0;
@@ -69,16 +62,16 @@
         <div class="mod-body">
             <div class="cheat-label">Coaching Credits</div>
             <input type="number" id="cc-amount" value="50000">
-            <button class="mod-btn" onclick="applyCustomCredits()">UPDATE SAVE</button>
+            <button class="mod-btn" onclick="modSave('credits')">UPDATE SAVE</button>
             
             <button class="mod-btn" style="color: #ffd700; border-color: #ffd700;" onclick="unlockAchievements()">🏆 UNLOCK ALL ACHIEVEMENTS</button>
             
             <hr style="border: 0.5px solid #222; margin: 10px 0;">
             
             <button class="mod-btn" id="speed-btn" onclick="toggleSpeed()">SPEED: 1.5x</button>
-            <button class="mod-btn" id="gpa-btn" onclick="toggleGPA()">AUTO-GPA: OFF</button>
+            <button class="mod-btn" id="god-btn" onclick="toggleGod()">GOD MODE: OFF</button>
             
-            <div class="status-footer">Prospect1700 Internal Hook v4.0</div>
+            <div class="status-footer">Prospect1700 Internal Hook v5.0</div>
         </div>
     </div>
 
@@ -86,60 +79,72 @@
     <script src="html5game/RetroBowl.js"></script>
 
     <script>
-        /** 1. BRANDING **/
-        const _decode = window.decodeURIComponent;
+        /* --- 1. BRANDING HOOK --- */
+        const _origDecode = window.decodeURIComponent;
         window.decodeURIComponent = function(str) {
-            let res = _decode(str);
+            let res = _origDecode(str);
             return res.replace(/New Star Games/g, "PROSPECT1700").replace(/Retro Bowl/g, "PROSPECT BOWL");
         };
 
-        /** 2. GAMEPLAY & SPEED **/
+        /* --- 2. THE YYC INSTANCE INJECTOR --- */
+        let godActive = false;
         window.g_fSpeedScale = 1.5;
+
+        function toggleGod() {
+            godActive = !godActive;
+            document.getElementById("god-btn").innerText = "GOD MODE: " + (godActive ? "ON" : "OFF");
+        }
+
         function toggleSpeed() {
-            const btn = document.getElementById("speed-btn");
             window.g_fSpeedScale = (window.g_fSpeedScale < 2.0) ? 2.5 : 1.5;
-            btn.innerText = "SPEED: " + window.g_fSpeedScale + "x";
+            document.getElementById("speed-btn").innerText = "SPEED: " + window.g_fSpeedScale + "x";
         }
 
-        let gpaActive = false;
-        function toggleGPA() {
-            gpaActive = !gpaActive;
-            document.getElementById("gpa-btn").innerText = gpaActive ? "AUTO-GPA: ON" : "AUTO-GPA: OFF";
-        }
-
+        // Deep Memory Scanner for YYC Attributes
         setInterval(() => {
-            if (window.g_pBuiltIn) {
+            if (godActive && typeof yyInst === "function") {
                 try {
-                    window.g_pBuiltIn.stamina = 100;
-                    window.g_pBuiltIn.player_condition = 100;
-                    if (gpaActive) window.g_pBuiltIn.player_gpa = 4.0;
+                    // Targeting the ID numbers you found for Speed, Catching, Stamina
+                    // We apply to a wide range of common instance offsets to ensure it hits
+                    [100438, 100439, 100440, 100444].forEach(id => {
+                        let inst = yyInst(window._inst || null, window._other || null, id);
+                        if (inst) {
+                            inst.gmlvalue = 20; // Force Max Stats
+                            inst.gmlstamina = 100;
+                            inst.gmlplayer_condition = 100;
+                            inst.gmlplayer_gpa = 4.0;
+                        }
+                    });
                 } catch(e) {}
             }
-        }, 1000);
+        }, 500);
 
-        /** 3. SAVE MODS **/
-        function applyCustomCredits() {
+        /* --- 3. SAVE MODS --- */
+        function modSave(type) {
             const key = Object.keys(localStorage).find(k => k.includes("RetroBowl") && k.includes(".ini"));
-            if (!key) return alert("Save not found! Play 1 week first.");
+            if (!key) return alert("No save file found! Play 1 week first.");
             let data = localStorage.getItem(key);
-            let val = document.getElementById("cc-amount").value;
-            data = data.replace(/coach_credit="(\d+)"/g, `coach_credit="${val}"`);
+            
+            if (type === 'credits') {
+                let val = document.getElementById("cc-amount").value;
+                data = data.replace(/coach_credit="(\d+)"/g, `coach_credit="${val}"`);
+            }
             localStorage.setItem(key, data);
             location.reload();
         }
 
         function unlockAchievements() {
             const key = Object.keys(localStorage).find(k => k.includes("RetroBowl") && k.includes(".ini"));
-            if (!key) return alert("No save found!");
+            if (!key) return;
             let data = localStorage.getItem(key);
             const tags = ["ACH_PASS", "ACH_TOUCHDOWN1", "ACH_TOUCHDOWN3", "ACH_TOUCHDOWN5", "ACH_FIELDGOAL", "ACH_FIELDGOAL25", "ACH_FIELDGOAL50", "ACH_FIELDGOAL60", "ACH_POINTAFTER1", "ACH_POINTAFTER2", "ACH_WIN1", "ACH_WIN5", "ACH_WIN10", "ACH_WIN25", "ACH_WIN50", "ACH_WIN100", "ACH_SEASON1", "ACH_SEASON5", "ACH_SEASON10", "ACH_SEASON20", "ACH_DRAFT", "ACH_FREEAGENT", "ACH_TRADEIN", "ACH_TRADEOUT", "ACH_CUT", "ACH_WIN_DIVISION", "ACH_WIN_PLAYOFF", "ACH_WIN_AFC", "ACH_WIN_NFC", "ACH_WIN_RETROBOWL1", "ACH_WIN_RETROBOWL3", "ACH_WIN_RETROBOWL5", "ACH_WIN_RETROBOWL10", "ACH_CAREER_TD50", "ACH_CAREER_TD100", "ACH_CAREER_TD250", "ACH_CAREER_TD500", "ACH_UPGRADE_STADIUM", "ACH_UPGRADE_TRAINING", "ACH_UPGRADE_REHAB", "ACH_MAX_STADIUM", "ACH_MAX_TRAINING", "ACH_MAX_REHAB", "ACH_WINNING_SEASON", "ACH_UNBEATEN_SEASON", "ACH_OFFENSE5", "ACH_DEFENSE5", "ACH_MORALE100", "ACH_FANS100", "ACH_HIRE_OF", "ACH_HIRE_DF", "ACH_HIRE_OF5", "ACH_HIRE_DF5", "ACH_PASS10", "ACH_PASS25", "ACH_PASS50", "ACH_RUN5", "ACH_RUN10", "ACH_RUN15", "ACH_GAME_PASS_200", "ACH_GAME_PASS_300", "ACH_GAME_PASS_400", "ACH_GAME_PASS_500", "ACH_GAME_COMPLETE_100", "ACH_GAME_RUSH_50", "ACH_GAME_RUSH_100", "ACH_GAME_RUSH_150", "ACH_TEAMS2", "ACH_SHUTOUT", "ACH_SCORE50", "ACH_COACHEXTEND", "ACH_FREEAGENT5", "ACH_BACKTOBACK", "ACH_THREEPEAT", "ACH_RETROBOWL_NOSTARQB", "ACH_RETROBOWL_NOSTAR", "ACH_WIN_NOSTARQB", "ACH_WIN_NOSTAR", "ACH_TD_QB", "ACH_TD_PASS50", "ACH_DOINK", "ACH_RETURN_25", "ACH_RETURN_50", "ACH_RETURN_75", "ACH_RETURN_TD", "ACH_NEW_FRESHMAN", "ACH_SENIOR_DRAFTR1", "ACH_SENIOR_DRAFTR2", "ACH_SENIOR_DRAFTR3", "ACH_SENIOR_GRAD", "ACH_JUNIOR_DRAFT", "ACH_WIN_MAJOR_SUB", "ACH_WIN_MINOR_SUB", "ACH_WIN_CONF_DIV", "ACH_WIN_ANY_BOWL"];
             tags.forEach(t => { data = data.replace(new RegExp(`${t}="0"`, "g"), `${t}="1"`); });
             localStorage.setItem(key, data);
-            alert("All achievements unlocked! Reloading...");
+            alert("Unlocked! Reloading...");
             location.reload();
         }
 
-        /** 4. UI PERSISTENCE **/
+        /* --- 4. UI PERSISTENCE --- */
         const menu = document.getElementById("mod-menu");
         const handle = document.getElementById("menu-handle");
         const saved = JSON.parse(localStorage.getItem('p_pos'));
