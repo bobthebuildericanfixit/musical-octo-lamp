@@ -1,152 +1,75 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
     <meta charset="utf-8" />
-    <title>Retro Bowl College Client</title>
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+    <title>Retro Bowl College - Modded Client</title>
     <style>
-        body { background: #000; color: #cccccc; margin: 0; overflow: hidden; font-family: sans-serif; }
-        canvas { image-rendering: pixelated; -webkit-interpolation-mode: nearest-neighbor; }
+        body { background: #000; color: #ccc; margin: 0; overflow: hidden; font-family: sans-serif; }
+        canvas { image-rendering: pixelated; }
         
-        /* --- MOD MENU STYLES --- */
+        /* Mod Menu Styles */
         #mod-floating-btn {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            width: 44px;
-            height: 44px;
-            background: #ed1c24;
-            color: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            cursor: pointer;
-            z-index: 10000;
-            box-shadow: 0 0 15px rgba(237, 28, 36, 0.4);
-            border: 2px solid white;
-            user-select: none;
+            position: fixed; top: 20px; left: 20px; width: 44px; height: 44px;
+            background: #ed1c24; color: white; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: bold; cursor: move; z-index: 10000;
+            box-shadow: 0 0 15px rgba(237, 28, 36, 0.6); border: 2px solid #fff;
         }
 
         #mod-menu-overlay {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 280px;
-            background: rgba(15, 15, 15, 0.98);
-            border: 2px solid #ed1c24;
-            color: white;
-            z-index: 10001;
-            display: none;
-            padding: 0;
-            box-shadow: 0 0 50px rgba(0,0,0,0.9);
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 300px; background: rgba(10, 10, 10, 0.95);
+            border: 2px solid #ed1c24; color: white; z-index: 10001;
+            display: none; box-shadow: 0 0 50px #000;
         }
 
-        .mod-header {
-            background: #ed1c24;
-            padding: 12px;
-            text-align: center;
-            font-size: 14px;
-            font-weight: bold;
-            letter-spacing: 1px;
-        }
-
+        .mod-header { background: #ed1c24; padding: 10px; text-align: center; font-weight: bold; }
         .mod-content { padding: 20px; }
-
-        .cheat-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-        }
-
+        .cheat-row { display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center; }
+        
         .mod-btn {
-            background: #222;
-            border: 1px solid #444;
-            color: #00ff00;
-            padding: 6px 10px;
-            cursor: pointer;
-            font-family: monospace;
-            font-size: 11px;
+            background: #222; border: 1px solid #444; color: #00ff00;
+            padding: 5px 10px; cursor: pointer; font-family: monospace;
         }
-
         .mod-btn:hover { background: #00ff00; color: #000; }
         .close-btn { width: 100%; color: #ff0000; border-color: #ff0000; margin-top: 10px; }
     </style>
 </head>
-
 <body>
+
     <div class="gm4html5_div_class" id="gm4html5_div_id">
-        <canvas id="canvas" width="853" height="480" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
-        </canvas>
+        <canvas id="canvas" width="853" height="480" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);"></canvas>
     </div>
 
-    <div id="mod-floating-btn" onclick="toggleMenu()">M</div>
+    <div id="mod-floating-btn">M</div>
 
     <div id="mod-menu-overlay">
-        <div class="mod-header">RETRO BOWL COLLEGE MOD</div>
+        <div class="mod-header">RB COLLEGE MOD MENU</div>
         <div class="mod-content">
             <div class="cheat-row">
                 <span>Coaching Credits</span>
-                <button class="mod-btn" onclick="applyCheat('credits')">+5k</button>
+                <button class="mod-btn" onclick="addCreditsLive()">+5000</button>
             </div>
             <div class="cheat-row">
                 <span>Scholarship Fund</span>
-                <button class="mod-btn" onclick="applyCheat('fund')">MAX</button>
+                <button class="mod-btn" onclick="maxFundLive()">MAX</button>
             </div>
             <div class="cheat-row">
-                <span>Infinite Stamina</span>
-                <button class="mod-btn" onclick="alert('Stamina Mod Active!')">ON</button>
+                <span>Stamina Mod</span>
+                <button id="stamina-toggle" class="mod-btn" onclick="toggleStamina()">OFF</button>
             </div>
-            <button class="mod-btn close-btn" onclick="toggleMenu()">CLOSE MENU</button>
+            <button class="mod-btn close-btn" onclick="toggleMenu()">CLOSE</button>
         </div>
     </div>
 
     <script type="text/javascript" src="html5game/RetroBowl.js"></script>
     <script src="poki-sdk.js"></script>
+    
+    <script src="mods.js"></script>
 
     <script>
-        function toggleMenu() {
-            const menu = document.getElementById('mod-menu-overlay');
-            menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
-        }
-
-        function applyCheat(type) {
-            // 1. Find the save key (Retro Bowl College usually uses this pattern)
-            let saveKey = "";
-            for (let i = 0; i < localStorage.length; i++) {
-                if (localStorage.key(i).includes("RetroBowl")) {
-                    saveKey = localStorage.key(i);
-                    break;
-                }
-            }
-
-            if (!saveKey) {
-                alert("No save file found! Play one week first.");
-                return;
-            }
-
-            let data = localStorage.getItem(saveKey);
-
-            if (type === 'credits') {
-                // Regex looks for coach_credit="NUMBER"
-                data = data.replace(/coach_credit="(\d+)"/g, (m, c) => `coach_credit="${parseInt(c) + 5000}"`);
-            } 
-            else if (type === 'fund') {
-                data = data.replace(/salary_cap="(\d+)"/g, 'salary_cap="500"');
-            }
-
-            localStorage.setItem(saveKey, data);
-            alert("Cheat Applied! Restart the game to see changes.");
-            location.reload(); // Refresh to load new save
-        }
-
-        // Initialize GameMaker
+        // Poki / GameMaker Bootstrapper
         (function() {
             function fin(ok) {
                 window.PokiSDK_OK = ok;
