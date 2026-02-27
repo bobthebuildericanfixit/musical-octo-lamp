@@ -8,19 +8,42 @@
         body { background: #000; margin: 0; overflow: hidden; font-family: 'Courier New', monospace; user-select: none; }
         canvas { image-rendering: pixelated; width: 100vw; height: 100vh; display: block; }
 
-        /* Hide menu until game is ready */
+        /* The Menu */
         #mod-menu {
             position: fixed; top: 20px; left: 20px; z-index: 10000;
-            background: rgba(5, 5, 5, 0.95); border: 2px solid #ed1c24;
-            width: 250px; display: none; box-shadow: 0 0 20px #000; color: white;
+            background: rgba(5, 5, 5, 0.98); border: 2px solid #ed1c24;
+            width: 260px; box-shadow: 0 0 20px #000; color: white;
+            transition: all 0.3s ease;
         }
-        .mod-header { background: #ed1c24; padding: 10px; font-weight: bold; cursor: move; text-align: center; }
+
+        /* Minimize State */
+        #mod-menu.minimized {
+            width: 46px; height: 46px; border-radius: 50%; overflow: hidden;
+        }
+
+        .mod-header { 
+            background: #ed1c24; padding: 10px; font-weight: bold; 
+            cursor: move; display: flex; justify-content: space-between; align-items: center;
+        }
+        
+        #min-btn { cursor: pointer; padding: 0 5px; font-size: 20px; }
+
         .mod-body { padding: 15px; }
+        #mod-menu.minimized .mod-body { display: none; }
+        #mod-menu.minimized .mod-header span { display: none; }
+        #mod-menu.minimized #min-btn { width: 100%; text-align: center; }
+
         .mod-btn {
             background: #1a1a1a; color: #fff; border: 1px solid #ed1c24; padding: 8px;
             cursor: pointer; width: 100%; margin-top: 10px; font-family: monospace;
         }
-        .mod-btn:hover { background: #ed1c24; }
+        
+        input[type="number"] {
+            width: 90%; background: #000; border: 1px solid #444; color: #0f0;
+            padding: 5px; margin-top: 5px; font-family: monospace;
+        }
+
+        .cheat-label { font-size: 11px; color: #888; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -30,92 +53,126 @@
     </div>
 
     <div id="mod-menu">
-        <div class="mod-header" id="menu-handle">PROSPECT1700 CLIENT</div>
+        <div class="mod-header" id="menu-handle">
+            <span>PROSPECT1700</span>
+            <div id="min-btn" onclick="toggleMinimize()">—</div>
+        </div>
         <div class="mod-body">
-            <button class="mod-btn" onclick="modSave('credits')">ADD 50k CREDITS</button>
+            <div class="cheat-label">COACHING CREDITS:</div>
+            <input type="number" id="cc-amount" value="50000">
+            <button class="mod-btn" onclick="applyCustomCredits()">APPLY CREDITS</button>
+            
+            <hr style="border: 0.5px solid #333; margin: 15px 0;">
+            
             <button class="mod-btn" id="speed-btn" onclick="toggleSpeed()">SPEED: 1.5x</button>
             <button class="mod-btn" id="gpa-btn" onclick="toggleGPA()">AUTO-GPA: OFF</button>
-            <div style="font-size: 10px; color: #888; text-align: center; margin-top: 10px;">Status: Game Loaded</div>
         </div>
     </div>
 
     <script src="poki-sdk.js"></script>
-
     <script src="html5game/RetroBowl.js"></script>
 
     <script>
-        // BRANDING HOOK (Safe Version)
+        // 1. BRANDING HOOK
         const _decode = window.decodeURIComponent;
         window.decodeURIComponent = function(str) {
             let res = _decode(str);
             return res.replace(/New Star Games/g, "PROSPECT1700");
         };
 
-        // BOOTSTRAP: Only show menu after Poki and GameMaker handshake
-        window.addEventListener("load", function() {
-            if (window.PokiSDK) {
-                PokiSDK.init().then(() => {
-                    console.log("Poki Ready");
-                    startGame();
-                }).catch(() => {
-                    console.log("Poki Failed, starting anyway");
-                    startGame();
-                });
+        // 2. SPEED ENGINE (Aggressive Hook)
+        window.g_fSpeedScale = 1.5;
+        function toggleSpeed() {
+            const btn = document.getElementById("speed-btn");
+            if (window.g_fSpeedScale < 2.0) {
+                window.g_fSpeedScale = 2.5;
+                btn.innerText = "SPEED: 2.5x";
             } else {
-                startGame();
+                window.g_fSpeedScale = 1.5;
+                btn.innerText = "SPEED: 1.5x";
             }
-        });
+        }
+
+        // 3. STORAGE MOD (With Check & Custom Amount)
+        function applyCustomCredits() {
+            const key = Object.keys(localStorage).find(k => k.includes("RetroBowl") && k.includes(".ini"));
+            if (!key) return alert("Play 1 week first!");
+
+            let data = localStorage.getItem(key);
+            let targetAmount = document.getElementById("cc-amount").value;
+            
+            // Regex to find existing credits
+            let match = data.match(/coach_credit="(\d+)"/);
+            if (match) {
+                let currentCC = parseInt(match[1]);
+                // Only set if current is LESS than target, or if user is forcing it
+                if (currentCC >= targetAmount) {
+                    let confirmHigher = confirm(`You already have ${currentCC} CC. Do you want to overwrite it with ${targetAmount}?`);
+                    if (!confirmHigher) return;
+                }
+            }
+
+            data = data.replace(/coach_credit="(\d+)"/g, `coach_credit="${targetAmount}"`);
+            localStorage.setItem(key, data);
+            location.reload();
+        }
+
+        // 4. MINIMIZE LOGIC
+        function toggleMinimize() {
+            const menu = document.getElementById("mod-menu");
+            const btn = document.getElementById("min-btn");
+            if (menu.classList.contains("minimized")) {
+                menu.classList.remove("minimized");
+                btn.innerText = "—";
+            } else {
+                menu.classList.add("minimized");
+                btn.innerText = "M"; // Icon shown when minimized
+            }
+        }
+
+        // 5. GAME BOOT
+        window.onload = function() {
+            if (window.PokiSDK) {
+                PokiSDK.init().then(() => startGame());
+            } else { startGame(); }
+        };
 
         function startGame() {
             if (typeof GameMaker_Init === "function") {
                 GameMaker_Init();
-                // Show the menu after a slight delay to ensure canvas is up
-                setTimeout(() => {
-                    document.getElementById("mod-menu").style.display = "block";
-                    initDragging();
-                }, 2000);
             }
         }
 
-        // --- CHEAT FUNCTIONS ---
-        window.g_fSpeedScale = 1.5;
-        function toggleSpeed() {
-            window.g_fSpeedScale = (window.g_fSpeedScale === 1.5) ? 2.5 : 1.5;
-            document.getElementById("speed-btn").innerText = "SPEED: " + window.g_fSpeedScale + "x";
-        }
+        // 6. DRAG LOGIC
+        const menu = document.getElementById("mod-menu");
+        const handle = document.getElementById("menu-handle");
+        let drag = false, x = 0, y = 0;
+        handle.onmousedown = (e) => { 
+            drag = true; 
+            x = menu.offsetLeft - e.clientX; 
+            y = menu.offsetTop - e.clientY; 
+        };
+        document.onmousemove = (e) => { 
+            if (drag) { 
+                menu.style.left = (e.clientX + x) + "px"; 
+                menu.style.top = (e.clientY + y) + "px"; 
+            } 
+        };
+        document.onmouseup = () => drag = false;
 
+        // GPA Loop
         let gpaActive = false;
         function toggleGPA() {
             gpaActive = !gpaActive;
             document.getElementById("gpa-btn").innerText = gpaActive ? "AUTO-GPA: ON" : "AUTO-GPA: OFF";
         }
-
         setInterval(() => {
             if (window.g_pBuiltIn) {
                 try {
-                    window.g_pBuiltIn.stamina = 100;
                     if (gpaActive) window.g_pBuiltIn.player_gpa = 4.0;
                 } catch(e) {}
             }
         }, 1000);
-
-        function modSave(type) {
-            const key = Object.keys(localStorage).find(k => k.includes("RetroBowl") && k.includes(".ini"));
-            if (!key) return alert("Play 1 week first!");
-            let data = localStorage.getItem(key);
-            if (type === 'credits') data = data.replace(/coach_credit="(\d+)"/g, 'coach_credit="50000"');
-            localStorage.setItem(key, data);
-            location.reload();
-        }
-
-        function initDragging() {
-            const menu = document.getElementById("mod-menu");
-            const handle = document.getElementById("menu-handle");
-            let drag = false, x = 0, y = 0;
-            handle.onmousedown = (e) => { drag = true; x = menu.offsetLeft - e.clientX; y = menu.offsetTop - e.clientY; };
-            document.onmousemove = (e) => { if (drag) { menu.style.left = (e.clientX + x) + "px"; menu.style.top = (e.clientY + y) + "px"; } };
-            document.onmouseup = () => drag = false;
-        }
     </script>
 </body>
 </html>
