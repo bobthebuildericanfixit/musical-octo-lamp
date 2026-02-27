@@ -3,81 +3,60 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
-    <title>Retro Bowl College - Modded by YOU</title>
+    <title>Retro Bowl College - Modded Client</title>
     <style>
-        body { background: #000; color: #ccc; margin: 0; overflow: hidden; font-family: 'Courier New', monospace; }
+        body { background: #000; color: #ccc; margin: 0; overflow: hidden; font-family: sans-serif; }
         canvas { image-rendering: pixelated; width: 100vw; height: 100vh; display: block; }
 
-        #mod-floating-btn, #mod-menu-overlay { user-select: none; -webkit-user-select: none; }
-
-        #mod-floating-btn {
-            position: fixed; top: 20px; left: 20px; width: 46px; height: 46px;
-            background: #ed1c24; color: white; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            font-weight: bold; cursor: grab; z-index: 10000;
-            box-shadow: 0 0 15px rgba(237, 28, 36, 0.7); border: 2px solid #fff;
+        #mod-menu {
+            position: fixed; top: 20px; left: 20px; z-index: 10000;
+            background: rgba(20, 20, 20, 0.9); border: 2px solid #ed1c24;
+            padding: 10px; border-radius: 8px; user-select: none;
         }
-
-        #mod-menu-overlay {
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 300px; background: rgba(10, 10, 10, 0.98);
-            border: 2px solid #ed1c24; color: white; z-index: 10001;
-            display: none; box-shadow: 0 0 50px #000;
-        }
-
-        .mod-header { background: #ed1c24; padding: 12px; text-align: center; font-weight: bold; cursor: move; }
-        .mod-content { padding: 20px; }
-        .cheat-row { display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center; }
-        
         .mod-btn {
-            background: #222; border: 1px solid #ed1c24; color: #fff;
-            padding: 8px 12px; cursor: pointer; font-family: monospace; font-size: 11px;
+            background: #ed1c24; color: white; border: none; padding: 8px;
+            cursor: pointer; font-weight: bold; width: 100%; margin-top: 5px;
         }
-        .mod-btn:hover { background: #ed1c24; color: white; }
-        .close-btn { width: 100%; color: #ff0000; border-color: #ff0000; margin-top: 10px; }
     </style>
 </head>
 <body>
-    <div id="gm4html5_div_id">
-        <canvas id="canvas" width="853" height="480" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);"></canvas>
-    </div>
-
-    <div id="mod-floating-btn">M</div>
-    <div id="mod-menu-overlay">
-        <div class="mod-header" id="menu-drag-handle">MODDED BY [YOUR NAME]</div>
-        <div class="mod-content">
-            <div class="cheat-row">
-                <span>Coaching Credits</span>
-                <button class="mod-btn" onclick="applyStorageMod('credits')">+50k</button>
-            </div>
-            <div class="cheat-row">
-                <span>God Mode</span>
-                <button class="mod-btn" id="god-btn" onclick="toggleGodMode()">OFF</button>
-            </div>
-            <div class="cheat-row">
-                <span>Game Speed</span>
-                <button class="mod-btn" id="speed-btn" onclick="toggleSpeed()">NORMAL</button>
-            </div>
-            <button class="mod-btn close-btn" onclick="toggleMenu()">CLOSE MENU</button>
-        </div>
+    <div id="mod-menu">
+        <div style="font-weight: bold; color: #ed1c24; margin-bottom: 5px;">CLIENT LOADED</div>
+        <button class="mod-btn" onclick="applyCredits()">+inf CREDITS</button>
     </div>
 
     <script src="poki-sdk.js"></script>
     <script src="html5game/RetroBowl.js"></script>
-    <script src="mods.js"></script>
 
     <script>
-        (function () {
-            function fin(ok) {
-                window.PokiSDK_OK = ok;
-                if (typeof GameMaker_Init === "function") GameMaker_Init();
+        // 1. THE TEXT MOD (REPLACING "NEW STAR GAMES")
+        // We hook into the internal string handler of GameMaker
+        const originalSetText = window.decodeURIComponent;
+        window.decodeURIComponent = function(str) {
+            let decoded = originalSetText(str);
+            if (decoded.includes("New Star Games")) {
+                return decoded.replace("New Star Games", "MODDED BY Prospect1700");
             }
-            window.addEventListener("load", function (_) {
-                if (window.PokiSDK) {
-                    PokiSDK.init().then(() => fin(true)).catch(() => fin(false));
-                } else { fin(false); }
-            });
-        })();
+            return decoded;
+        };
+
+        // 2. STABLE BOOT
+        window.addEventListener("load", function() {
+            if (typeof GameMaker_Init === "function") GameMaker_Init();
+        });
+
+        // 3. STABLE STORAGE MOD (CREDITS)
+        function applyCredits() {
+            const key = Object.keys(localStorage).find(k => k.includes("RetroBowl") && k.includes(".ini"));
+            if (key) {
+                let data = localStorage.getItem(key);
+                data = data.replace(/coach_credit="(\d+)"/g, 'coach_credit="999999999999999"');
+                localStorage.setItem(key, data);
+                location.reload();
+            } else {
+                alert("Play 1 week first!");
+            }
+        }
     </script>
 </body>
 </html>
